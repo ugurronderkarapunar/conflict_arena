@@ -1,52 +1,32 @@
-from database import get_country, get_all_countries
-from typing import Dict, List
+from sqlalchemy.orm import Session
+from database import Country
+from typing import Dict
 
-def get_full_risk_profile(country: str) -> Dict:
-    """
-    Bir ülke için risk profilini hesaplar.
-    Formül: (conflict * 0.4) + ((10 - political) * 0.3) + (economic * 0.3)
-    """
-    country_data = get_country(country)
-    if not country_data:
-        raise ValueError(f"Ülke '{country}' bulunamadı.")
-    
-    conflict = country_data["conflict_intensity"]
-    political = country_data["political_stability"]
-    economic = country_data["economic_risk"]
-    
-    risk_score = (conflict * 0.4) + ((10 - political) * 0.3) + (economic * 0.3)
-    risk_score = round(risk_score, 2)
-    
-    if risk_score < 3:
-        risk_level = "LOW"
-        risk_color = "green"
-    elif risk_score < 6:
-        risk_level = "MEDIUM"
-        risk_color = "orange"
-    elif risk_score < 8:
-        risk_level = "HIGH"
-        risk_color = "red"
-    else:
-        risk_level = "EXTREME"
-        risk_color = "darkred"
-    
+def calculate_risk_score(conflict: float, political: float, economic: float) -> float:
+    score = (conflict * 0.4) + ((10 - political) * 0.3) + (economic * 0.3)
+    return round(score, 2)
+
+def get_risk_level(score: float) -> str:
+    if score < 3: return "LOW"
+    if score < 6: return "MEDIUM"
+    if score < 8: return "HIGH"
+    return "EXTREME"
+
+def get_risk_color(level: str) -> str:
+    return {"LOW":"#00cc66","MEDIUM":"#ffaa00","HIGH":"#ff4444","EXTREME":"#8b0000"}.get(level, "gray")
+
+def get_full_risk_profile(db: Session, country_name: str) -> Dict:
+    country = db.query(Country).filter(Country.name == country_name).first()
+    if not country:
+        raise ValueError("Ülke bulunamadı")
+    score = calculate_risk_score(country.conflict_intensity, country.political_stability, country.economic_risk)
+    level = get_risk_level(score)
     return {
-        "country": country,
-        "conflict_intensity": conflict,
-        "political_stability": political,
-        "economic_risk": economic,
-        "risk_score": risk_score,
-        "risk_level": risk_level,
-        "risk_color": risk_color
+        "country": country.name,
+        "conflict_intensity": country.conflict_intensity,
+        "political_stability": country.political_stability,
+        "economic_risk": country.economic_risk,
+        "risk_score": score,
+        "risk_level": level,
+        "risk_color": get_risk_color(level)
     }
-
-def get_all_risk_profiles() -> List[Dict]:
-    """Tüm ülkelerin risk profilini döndürür."""
-    countries = get_all_countries()
-    profiles = []
-    for c in countries:
-        try:
-            profiles.append(get_full_risk_profile(c["name"]))
-        except ValueError:
-            continue
-    return profiles
