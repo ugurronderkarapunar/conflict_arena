@@ -1,6 +1,14 @@
-streamlit
 fastapi
 uvicorn[standard]
+streamlit
+sqlalchemy
+psycopg2-binary   # PostgreSQL için (SQLite için gerekmez)
+python-dotenv
+bcrypt
+pyjwt
+apscheduler
+requests
 pandas
 plotly
-requests
+pydeck
+streamlit-folium  # (alternatif harita için)
